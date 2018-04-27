@@ -64,7 +64,7 @@ namespace Swastika.Base.Repository
     /// <typeparam name="TView">The type of the view.</typeparam>
     /// <seealso cref="Swastika.Base.Repository.ModelRepositoryBase{TContext, TModel}" />
     public class DefaultRepository<TDbContext, TModel, TView> :
-        Swastika.Base.Repository.ViewRepositoryBase<TDbContext, TModel, TView>
+        ViewRepositoryBase<TDbContext, TModel, TView>
         where TDbContext : DbContext
         where TModel : class
         where TView : Swastika.Base.ViewModels.ViewModelBase<TDbContext, TModel, TView>

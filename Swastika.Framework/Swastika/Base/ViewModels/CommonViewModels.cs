@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using static Swastika.Common.Constants;
+using static Swastika.Common.Utility.Enums;
 
 namespace Swastika.Base.ViewModels
 {
@@ -232,7 +233,7 @@ namespace Swastika.Base.ViewModels
         /// The status.
         /// </value>
         [JsonProperty("status")]
-        public int Status { get; set; }
+        public SWStatus Status { get; set; }
 
         /// <summary>
         /// Gets or sets the errors.
@@ -338,7 +339,7 @@ namespace Swastika.Base.ViewModels
         /// The size of the page.
         /// </value>
         [JsonProperty("pageSize")]
-        public int? PageSize { get; set; } = 10;
+        public int? PageSize { get; set; }
 
         /// <summary>
         /// Gets or sets the user agent.

@@ -2,12 +2,17 @@
 // The Swastika I/O Foundation licenses this file to you under the GNU General Public License v3.0 license.
 // See the LICENSE file in the project root for more information.
 
+using OfficeOpenXml;
+using OfficeOpenXml.Table;
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Web;
 
 namespace Swastika.Common.Helper
 {
@@ -53,6 +58,139 @@ namespace Swastika.Common.Helper
                 sb.Append(_base62chars[_random.Next(62)]);
 
             return sb.ToString();
+        }
+        public static string ExportToExcel<T>(List<T> lstData, string sheetName, string folderPath, string fileName
+            , out string errorMsg, List<string> headers = null)
+        {
+            errorMsg = string.Empty;
+
+            try
+            {
+                if (lstData.Count > 0)
+                {
+                    var filenameE = fileName + "-" + DateTime.Now.ToString("yyyyMMdd") + ".xlsx";
+
+                    // create new data table
+                    var dtable = new DataTable();
+
+                    if (headers == null)
+                    {
+
+                        // get first item
+                        var listColumn = lstData[0].GetType().GetProperties();
+
+                        // add column name to table
+                        foreach (var item in listColumn)
+                        {
+                            dtable.Columns.Add(item.Name, typeof(string));
+                        }
+                    }
+                    else
+                    {
+                        foreach (var item in headers)
+                        {
+                            dtable.Columns.Add(item, typeof(string));
+                        }
+                    }
+
+                    // Row value
+                    foreach (var a in lstData)
+                    {
+                        var r = dtable.NewRow();
+                        if (headers == null)
+                        {
+                            foreach (var prop in a.GetType().GetProperties())
+                            {
+                                r[prop.Name] = prop.GetValue(a, null);
+                            }
+                        }
+                        else
+                        {
+                            var props = a.GetType().GetProperties();
+                            for (int i = 0; i < headers.Count; i++)
+                            {
+                                r[i] = props[i].GetValue(a, null);
+                            }
+                        }
+
+                        dtable.Rows.Add(r);
+                    }
+
+                    // Create file Path
+                    string serverPath = HttpContext.Current.Server.MapPath(folderPath);
+                    if (!Directory.Exists(serverPath))
+                    {
+                        Directory.CreateDirectory(serverPath);
+                    }
+                    string savePath = Path.Combine(folderPath, filenameE);
+
+                    // Save Excel file
+                    using (var pck = new ExcelPackage())
+                    {
+                        string SheetName = sheetName != string.Empty ? sheetName : "Report";
+                        var wsDt = pck.Workbook.Worksheets.Add(SheetName);
+                        wsDt.Cells["A1"].LoadFromDataTable(dtable, true, TableStyles.None);
+                        wsDt.Cells[wsDt.Dimension.Address].AutoFitColumns();
+
+                        WriteBytesToFile(savePath, pck.GetAsByteArray());
+                        return savePath;
+                    }
+                }
+                else
+                {
+                    errorMsg = "Can not export data of empty list";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMsg = ex.Message;
+            }
+
+            return string.Empty;
+        }
+
+        public static List<string> LoadImportExcelRecords(string strBase64, int startRow, int startColumn, int totalColumns, out List<int> lstFailedIndex)
+        {
+            lstFailedIndex = new List<int>();
+            List<string> result = new List<string>();
+            try
+            {
+
+                byte[] bytes = Convert.FromBase64String(strBase64);
+                using (MemoryStream ms = new MemoryStream(bytes))
+                {
+                    ExcelPackage package = new ExcelPackage(ms);
+                    ExcelWorksheet worksheet = package.Workbook.Worksheets.First();
+                    int row = startRow;
+                    while (worksheet.Cells[row, startColumn].Value != null && !string.IsNullOrEmpty(worksheet.Cells[row, startColumn].Value.ToString()))
+                    {
+                        string record = string.Empty;
+                        try
+                        {
+                            for (int i = startColumn; i < startColumn + totalColumns; i++)
+                            {
+                                string value = worksheet.Cells[row, i].Value?.ToString() ?? string.Empty;
+                                record += $"{value}|";
+                            }
+                            if (!string.IsNullOrEmpty(record))
+                            {
+                                result.Add(record);
+                            }
+                        }
+                        catch// (Exception ex)
+                        {
+                            lstFailedIndex.Add(row);
+                            continue;
+                        }
+                        row++;
+                    }
+                }
+            }
+            catch
+            {
+
+            }
+            return result;
         }
 
         /// <summary>
@@ -290,6 +428,27 @@ namespace Swastika.Common.Helper
                 return string.Empty;
             }
 
+        }
+
+        public static void WriteBytesToFile(string filePath, byte[] content)
+        {
+            string fullPath = HttpContext.Current.Server.MapPath(filePath);
+            if (File.Exists(fullPath))
+            {
+                File.Delete(fullPath);
+            }
+
+            FileStream fs = new FileStream(fullPath, FileMode.Create);
+            BinaryWriter w = new BinaryWriter(fs);
+            try
+            {
+                w.Write(content);
+            }
+            finally
+            {
+                fs.Close();
+                w.Close();
+            }
         }
 
         /// <summary>

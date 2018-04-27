@@ -494,10 +494,10 @@ namespace Swastika.Base.ViewModels
                 ParseModel();
                 if (isRemoveRelatedModels)
                 {
-                    var removeRelatedResult = await RemoveRelatedModelsAsync((TView)this, context, transaction).ConfigureAwait(false);
+                    var removeRelatedResult = await RemoveRelatedModelsAsync((TView)this, context, transaction);
                     if (removeRelatedResult.IsSucceed)
                     {
-                        result = await Repository.RemoveModelAsync(Model, context, transaction).ConfigureAwait(false);
+                        result = await Repository.RemoveModelAsync(Model, context, transaction);
                     }
                     else
                     {
@@ -506,10 +506,13 @@ namespace Swastika.Base.ViewModels
                         result.Exception = removeRelatedResult.Exception;
                     }
                 }
+                else
+                {
+                    result = await Repository.RemoveModelAsync(Model, context, transaction);
+                }
 
                 if (result.IsSucceed)
                 {
-                    result = await Repository.RemoveModelAsync(Model, context, transaction).ConfigureAwait(false);
                     if (_transaction == null)
                     {
                         transaction.Commit();
@@ -578,7 +581,7 @@ namespace Swastika.Base.ViewModels
             var context = _context ?? InitContext();
             var transaction = _transaction ?? context.Database.BeginTransaction();
             RepositoryResponse<TView> result = new RepositoryResponse<TView>() { IsSucceed = true };
-            Validate();
+            Validate(context, transaction);
             if (IsValid)
             {
                 try
@@ -830,10 +833,13 @@ namespace Swastika.Base.ViewModels
                         result.Exception = removeRelatedResult.Exception;
                     }
                 }
+                else
+                {
+                    result = Repository.RemoveModel(Model, context, transaction);
+                }
 
                 if (result.IsSucceed)
                 {
-                    result = Repository.RemoveModel(Model, context, transaction);
                     if (_transaction == null)
                     {
                         transaction.Commit();
@@ -897,7 +903,7 @@ namespace Swastika.Base.ViewModels
             var context = _context ?? InitContext();
             var transaction = _transaction ?? context.Database.BeginTransaction();
             RepositoryResponse<TView> result = new RepositoryResponse<TView>() { IsSucceed = true };
-            Validate();
+            Validate(_context, _transaction);
             if (IsValid)
             {
                 try
